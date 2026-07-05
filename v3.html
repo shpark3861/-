@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>요기배달 분석 대시보드</title>
+    <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+      // GitHub API → 항상 최신 커밋의 index.html (캐시 없음)
+      fetch('https://api.github.com/repos/shpark3861/-/contents/index.html', { cache: 'no-store' })
+        .then(r => r.json())
+        .then(data => {
+          const html = atob(data.content.replace(/\n/g, ''));
+          const jsMatch  = html.match(/assets\/(index-[^"]+\.js)/);
+          const cssMatch = html.match(/assets\/(index-[^"]+\.css)/);
+          if (cssMatch) {
+            const link = document.createElement('link');
+            link.rel = 'stylesheet'; link.crossOrigin = 'anonymous';
+            link.href = './assets/' + cssMatch[1];
+            document.head.appendChild(link);
+          }
+          if (jsMatch) {
+            const src = './assets/' + jsMatch[1];
+            // 파일 존재 확인 후 로드 (Pages 배포 지연 대비)
+            fetch(src, { method: 'HEAD' }).then(r => {
+              const actualSrc = r.ok ? src : './assets/index-BJXGGgo8.js';
+              const s = document.createElement('script');
+              s.type = 'module'; s.crossOrigin = 'anonymous';
+              s.src = actualSrc;
+              document.head.appendChild(s);
+            });
+          }
+        });
+    </script>
+  </body>
+</html>
