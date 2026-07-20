@@ -1403,8 +1403,8 @@ function renderZoneTable(){
     {label:'취소건수',fmt:(_,r)=>r.cancel.toLocaleString()},
     {label:'그라이더건수',fmt:(_,r)=>r.grider.toLocaleString()},
     {label:'그라이더비중%',fmt:(_,r)=>r.grider_ratio+'%'},
-    {label:'지원금건수',fmt:(_,r)=>r.promo.toLocaleString()},
-    {label:'지원금금액',fmt:(_,r)=>Math.round(r.promoAmt).toLocaleString()+'원'},
+    {label:'할증건수',fmt:(_,r)=>r.promo.toLocaleString()},
+    {label:'할증금액',fmt:(_,r)=>Math.round(r.promoAmt).toLocaleString()+'원'},
   ],rows);
   makeSortable(el);
 }
