@@ -311,7 +311,13 @@ th.sort-desc::after{content:' ▼';color:var(--primary);font-size:.7em}
     </div>
   </div>
 
-  <!-- 상세 테이블 -->
+  <!-- 일자별 테이블 -->
+  <div class="chart-card">
+    <h3>📅 일자별 현황 <span style="font-size:.85rem;font-weight:400;color:var(--text3)">(기간A 선택 구간)</span></h3>
+    <div class="tbl-scroll" id="rider-daily-table"></div>
+  </div>
+
+  <!-- 시군구 상세 테이블 -->
   <div class="chart-card">
     <h3>시군구별 상세 — 기간A vs 기간B 비교</h3>
     <div class="tbl-scroll" id="rider-region-table"></div>
@@ -2032,6 +2038,44 @@ function renderRiderDash(){
   h+='</tbody></table>';
   document.getElementById('rider-region-table').innerHTML=h;
   makeSortable(document.getElementById('rider-region-table'));
+
+  // 일자별 테이블 (기간A)
+  const aDates=RD.dates.filter(d=>d>=aFrom&&d<=aTo);
+  let dh=`<table><thead><tr>
+    <th>일자</th>
+    <th class="sortable">수행건수</th>
+    <th class="sortable">수행 라이더 수</th>
+    <th class="sortable">신규 라이더</th>
+    <th>신규 비율</th>
+    <th class="sortable">라이더당 건수</th>
+    <th>TOP 브랜드</th>
+  </tr></thead><tbody>`;
+  // 전날 대비 증감 표시
+  let prev=null;
+  aDates.forEach(d=>{
+    const e=RD.byDate[d];
+    const topBrand=Object.entries(e.brands||{}).sort((a,b)=>b[1]-a[1])[0];
+    const perRider=e.riders?(e.cnt/e.riders).toFixed(1):'-';
+    const cntDiff=prev?e.cnt-prev.cnt:null;
+    const ridDiff=prev?e.riders-prev.riders:null;
+    const cntCl=cntDiff===null?'':cntDiff>0?'color:var(--green)':cntDiff<0?'color:var(--red)':'';
+    const ridCl=ridDiff===null?'':ridDiff>0?'color:var(--green)':ridDiff<0?'color:var(--red)':'';
+    const cntStr=cntDiff===null?'':` <span style="font-size:.8rem;${cntCl}">(${cntDiff>0?'+':''}${cntDiff})</span>`;
+    const ridStr=ridDiff===null?'':` <span style="font-size:.8rem;${ridCl}">(${ridDiff>0?'+':''}${ridDiff})</span>`;
+    dh+=`<tr>
+      <td style="font-weight:700;color:var(--text)">${d}</td>
+      <td style="color:var(--primary);font-weight:700">${nf(e.cnt)}${cntStr}</td>
+      <td style="color:var(--green);font-weight:700">${nf(e.riders)}${ridStr}</td>
+      <td style="color:var(--yellow);font-weight:700">${nf(e.newRiders)}</td>
+      <td>${pct(e.newRiders,e.riders)}</td>
+      <td>${perRider}</td>
+      <td style="font-size:.88rem;color:var(--text2)">${topBrand?`${topBrand[0]} (${nf(topBrand[1])}건)`:'-'}</td>
+    </tr>`;
+    prev=e;
+  });
+  dh+=`</tbody></table>`;
+  document.getElementById('rider-daily-table').innerHTML=dh;
+  makeSortable(document.getElementById('rider-daily-table'));
 }
 (function(){renderRiderDash();})();
 </script>
