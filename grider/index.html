@@ -2093,37 +2093,42 @@ function renderRiderDash(){
   const sepStyle = 'border-left:3px solid var(--primary);';
   let ph = `<table style="font-size:.88rem"><thead><tr>
     <th style="position:sticky;left:0;z-index:3;background:var(--surface2);min-width:90px">시군구</th>
-    <th style="background:#EBF3FE;min-width:60px;color:var(--primary)">A합계</th>`;
+    <th style="background:#EBF3FE;min-width:60px;color:var(--primary)">A평균</th>`;
   aDates.forEach(d => { ph += `<th style="background:#EBF3FE;min-width:52px;white-space:nowrap;color:var(--primary)">${d.slice(5)}</th>`; });
   if (hasB) {
-    ph += `<th style="${sepStyle}background:#FFF9EC;min-width:60px;color:var(--yellow)">B합계</th>`;
+    ph += `<th style="${sepStyle}background:#FFF9EC;min-width:60px;color:var(--yellow)">B평균</th>`;
     bDates2.forEach(d => { ph += `<th style="background:#FFF9EC;min-width:52px;white-space:nowrap;color:var(--yellow)">${d.slice(5)}</th>`; });
   }
   ph += `</tr></thead><tbody>`;
-  // 전체 합계 행
+  const aDaysCnt = aDates.length || 1;
+  const bDaysCnt = bDates2.length || 1;
+  const avg = (v, days) => (v / days).toFixed(1);
+  // 전체 평균 행
   ph += `<tr style="background:#F0F4FD;font-weight:700">
     <td style="position:sticky;left:0;background:#F0F4FD;font-weight:800;color:var(--primary)">전체</td>
-    <td style="color:var(--primary);font-weight:800;background:#EBF3FE">${nf(A.riders)}</td>`;
+    <td style="color:var(--primary);font-weight:800;background:#EBF3FE">${avg(aDates.reduce((s,d)=>s+RD.byDate[d].riders,0), aDaysCnt)}</td>`;
   aDates.forEach(d => { ph += `<td style="color:var(--primary);background:#EBF3FE">${nf(RD.byDate[d].riders)}</td>`; });
   if (hasB) {
-    ph += `<td style="${sepStyle}color:var(--yellow);font-weight:800;background:#FFF9EC">${nf(B.riders)}</td>`;
+    ph += `<td style="${sepStyle}color:var(--yellow);font-weight:800;background:#FFF9EC">${avg(bDates2.reduce((s,d)=>s+RD.byDate[d].riders,0), bDaysCnt)}</td>`;
     bDates2.forEach(d => { ph += `<td style="color:var(--yellow);background:#FFF9EC">${nf(RD.byDate[d].riders)}</td>`; });
   }
   ph += `</tr>`;
   // 시군구별 행
   pivotRgs.forEach(rg => {
-    const totalA = A.rg[rg]?.riders || 0;
-    const totalB = B.rg[rg]?.riders || 0;
+    const sumA = aDates.reduce((s,d) => s + ((RD.byDate[d].rg||{})[rg]?.riders||0), 0);
+    const sumB = bDates2.reduce((s,d) => s + ((RD.byDate[d].rg||{})[rg]?.riders||0), 0);
+    const avgA = avg(sumA, aDaysCnt);
+    const avgB = avg(sumB, bDaysCnt);
     ph += `<tr>
       <td style="position:sticky;left:0;z-index:1;background:var(--surface);font-weight:700">${rg}</td>
-      <td style="color:var(--green);font-weight:700;background:#EBF3FE">${nf(totalA)}</td>`;
+      <td style="color:var(--green);font-weight:700;background:#EBF3FE">${avgA}</td>`;
     aDates.forEach(d => {
       const v = (RD.byDate[d].rg||{})[rg]?.riders || 0;
       const bg = v === 0 ? 'background:#EBF3FE' : `background:rgba(49,130,246,${Math.min(0.08 + v/30*0.55, 0.65).toFixed(2)})`;
       ph += `<td style="${bg};text-align:center">${v || ''}</td>`;
     });
     if (hasB) {
-      ph += `<td style="${sepStyle}color:var(--yellow);font-weight:700;background:#FFF9EC">${totalB ? nf(totalB) : ''}</td>`;
+      ph += `<td style="${sepStyle}color:var(--yellow);font-weight:700;background:#FFF9EC">${sumB > 0 ? avgB : ''}</td>`;
       bDates2.forEach(d => {
         const v = (RD.byDate[d].rg||{})[rg]?.riders || 0;
         const bg = v === 0 ? 'background:#FFF9EC' : `background:rgba(245,165,36,${Math.min(0.08 + v/30*0.55, 0.65).toFixed(2)})`;
