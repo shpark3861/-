@@ -2039,9 +2039,16 @@ function renderRiderDash(){
         const aS=aRiderSets[r]||new Set(), bS=bRiderSets[r]||new Set();
         return [...bS].filter(id=>!aS.has(id)).length;
       }),backgroundColor:'rgba(245,165,36,0.85)',borderRadius:3,stack:'s'},
+      {label:'기간B 건수',data:top10.map(r=>B.rg[r]?.cnt||0),
+       type:'line',borderColor:'#F04452',backgroundColor:'rgba(240,68,82,0.1)',
+       pointRadius:4,tension:0.2,yAxisID:'y1',stack:undefined},
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
-      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}
+      scales:{
+        x:{stacked:true},
+        y:{stacked:true,beginAtZero:true,title:{display:true,text:'라이더 수'}},
+        y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'건수'}}
+      }}
   });
 
   // 상세 테이블
