@@ -129,6 +129,7 @@ th.sort-desc::after{content:' ▼';color:var(--primary);font-size:.7em}
   <button onclick="showTab('effect',this)">📈 프로모션 효과</button>
   <button onclick="showTab('yogi-zone',this)">🗺️ 요기배달 존별</button>
   <button onclick="showTab('detail',this)">📋 상세 데이터</button>
+  <button onclick="showTab('rider',this)">🧑‍💼 라이더 분석</button>
 </div>
 
 <div id="tab-overview" class="tab active">
@@ -254,6 +255,76 @@ th.sort-desc::after{content:' ▼';color:var(--primary);font-size:.7em}
   <div class="chart-card">
     <h3>전체 지역 프로모션 제안 요약 (일평균 기준)</h3>
     <div class="tbl-wrap" id="suggest-table"></div>
+  </div>
+</div>
+
+<div id="tab-rider" class="tab">
+  <!-- 데이터 입력 -->
+  <div class="chart-card" style="margin-bottom:16px">
+    <h3 style="margin-bottom:12px">📂 정산용 데이터 조회_그라이더 붙여넣기 / 파일 업로드</h3>
+    <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
+      <textarea id="rider-paste" placeholder="정산용 데이터 조회_그라이더 탭의 내용을 여기에 붙여넣기 하세요 (헤더 포함 전체 선택 후 Ctrl+C → Ctrl+V)" style="flex:1;min-width:300px;height:90px;background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:10px;font-size:.9rem;color:var(--text);font-family:inherit;resize:vertical"></textarea>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <label style="background:var(--surface2);border:1.5px solid var(--border);border-radius:var(--radius-sm);padding:9px 16px;cursor:pointer;font-size:.95rem;color:var(--text2);font-weight:600;text-align:center">
+          📁 파일 선택<input type="file" id="rider-file" accept=".csv,.tsv,.txt" style="display:none">
+        </label>
+        <button id="rider-parse-btn" onclick="(function(){
+          const raw = document.getElementById('rider-paste').value.trim();
+          if(!raw){alert('데이터를 먼저 붙여넣거나 파일을 선택해주세요.');return;}
+          RIDER_ROWS = parseRiderCSV(raw);
+          if(!RIDER_ROWS.length){alert('파싱 실패: 데이터 형식을 확인해주세요.');return;}
+          document.getElementById('rider-info').textContent = '총 '+RIDER_ROWS.length.toLocaleString()+'행 로드됨';
+          renderRiderAnalysis();
+        })()" style="background:var(--primary);color:#fff;border:none;border-radius:var(--radius-sm);padding:9px 20px;cursor:pointer;font-size:.95rem;font-weight:700;font-family:inherit">▶ 분석 실행</button>
+        <span id="rider-info" style="font-size:.82rem;color:var(--text3);text-align:center"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="rider-result" style="display:none">
+    <!-- 기간 비교 설정 -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 18px;margin-bottom:16px;display:flex;gap:24px;flex-wrap:wrap;align-items:center">
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.85rem;font-weight:700;color:var(--primary);background:var(--primary-light);padding:3px 10px;border-radius:6px">기간 A</span>
+        <select id="rider-a-from" onchange="renderRiderAnalysis()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-family:inherit"></select>
+        <span style="color:var(--text3)">~</span>
+        <select id="rider-a-to" onchange="renderRiderAnalysis()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-family:inherit"></select>
+      </div>
+      <span style="color:var(--text3);font-weight:700">vs</span>
+      <div style="display:flex;align-items:center;gap:8px">
+        <span style="font-size:.85rem;font-weight:700;color:var(--text2);background:var(--surface2);padding:3px 10px;border-radius:6px">기간 B</span>
+        <select id="rider-b-from" onchange="renderRiderAnalysis()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-family:inherit"></select>
+        <span style="color:var(--text3)">~</span>
+        <select id="rider-b-to" onchange="renderRiderAnalysis()" style="padding:6px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:.9rem;font-family:inherit"></select>
+      </div>
+      <span style="font-size:.8rem;color:var(--text3)">※ 신규 라이더 = 전체 데이터 내 최초 완료일이 해당 기간인 라이더</span>
+    </div>
+
+    <!-- KPI -->
+    <div class="kpi-row" id="rider-kpi" style="margin-bottom:16px"></div>
+
+    <!-- 차트 -->
+    <div class="chart-card">
+      <h3>일별 완료건수 · 액티브 라이더 · 신규 라이더 추이</h3>
+      <div class="chart-wrap h280"><canvas id="c-rider-trend"></canvas></div>
+    </div>
+
+    <div class="section-grid" style="margin-bottom:16px">
+      <div class="chart-card">
+        <h3>시군구별 완료건수 · 액티브 라이더 TOP 15 (기간A vs B)</h3>
+        <div class="chart-wrap h360"><canvas id="c-rider-region"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <h3>시군구별 신규 vs 기존 라이더 구성 TOP 10 (기간A)</h3>
+        <div class="chart-wrap h360"><canvas id="c-rider-new"></canvas></div>
+      </div>
+    </div>
+
+    <!-- 테이블 -->
+    <div class="chart-card">
+      <h3>시군구별 상세 — 기간A vs 기간B 비교</h3>
+      <div class="tbl-scroll" id="rider-region-table"></div>
+    </div>
   </div>
 </div>
 
@@ -1769,6 +1840,308 @@ function renderDetail(){
   makeSortable(document.getElementById('detail-table'));
 }
 renderDetail();
+
+// ═══════════════════════════════════════════════════════════
+// 라이더 분석 탭
+// ═══════════════════════════════════════════════════════════
+let RIDER_ROWS = [];
+let riderChartDaily=null, riderChartRegion=null, riderChartNew=null, riderChartTrend=null;
+
+function parseRiderCSV(raw) {
+  const lines = raw.trim().split(/\r?\n/);
+  if (lines.length < 2) return [];
+  const sep = lines[0].includes('\t') ? '\t' : ',';
+  const headers = lines[0].split(sep).map(h => h.trim().replace(/^"|"$/g,''));
+  const rows = [];
+  for (let i = 1; i < lines.length; i++) {
+    const cols = lines[i].split(sep).map(c => c.trim().replace(/^"|"$/g,''));
+    if (cols.length < 5) continue;
+    const r = {};
+    headers.forEach((h, j) => r[h] = cols[j] || '');
+    rows.push(r);
+  }
+  return rows;
+}
+
+function extractSigungu(addr) {
+  if (!addr) return '미상';
+  const parts = addr.trim().split(/\s+/);
+  return parts.length >= 2 ? parts[1] : parts[0] || '미상';
+}
+
+function getDateStr(row) {
+  const v = row['완료일시'] || row['운영기준일'] || '';
+  return v.slice(0, 10);
+}
+
+function buildRiderData(rows) {
+  // 배달대행완료 필터
+  const done = rows.filter(r => (r['호출상태']||'').includes('배달대행완료') || (r['호출상태']||'').includes('완료'));
+  if (!done.length) return null;
+
+  // 라이더별 최초 완료일 계산
+  const riderFirst = {};
+  done.forEach(r => {
+    const code = r['수행라이더코드'] || r['수행라이더명'] || '';
+    const dt = getDateStr(r);
+    if (!code) return;
+    if (!riderFirst[code] || dt < riderFirst[code]) riderFirst[code] = dt;
+  });
+
+  // 일별 집계
+  const byDate = {};
+  done.forEach(r => {
+    const dt = getDateStr(r);
+    const code = r['수행라이더코드'] || r['수행라이더명'] || '';
+    const rg = extractSigungu(r['출발지 주소'] || r['출발지주소'] || '');
+    if (!dt) return;
+    if (!byDate[dt]) byDate[dt] = { cnt: 0, riders: new Set(), newRiders: new Set(), rg: {} };
+    byDate[dt].cnt++;
+    if (code) {
+      byDate[dt].riders.add(code);
+      if (riderFirst[code] === dt) byDate[dt].newRiders.add(code);
+    }
+    if (rg !== '미상') {
+      if (!byDate[dt].rg[rg]) byDate[dt].rg[rg] = { cnt: 0, riders: new Set(), newRiders: new Set() };
+      byDate[dt].rg[rg].cnt++;
+      if (code) {
+        byDate[dt].rg[rg].riders.add(code);
+        if (riderFirst[code] === dt) byDate[dt].rg[rg].newRiders.add(code);
+      }
+    }
+  });
+
+  // 시군구 전체 집계 (기간 무관)
+  const byRg = {};
+  done.forEach(r => {
+    const rg = extractSigungu(r['출발지 주소'] || r['출발지주소'] || '');
+    const code = r['수행라이더코드'] || r['수행라이더명'] || '';
+    const dt = getDateStr(r);
+    if (rg === '미상') return;
+    if (!byRg[rg]) byRg[rg] = { cnt: 0, riders: new Set(), newRiders: new Set() };
+    byRg[rg].cnt++;
+    if (code) {
+      byRg[rg].riders.add(code);
+      if (riderFirst[code] === dt) byRg[rg].newRiders.add(code);
+    }
+  });
+
+  return { byDate, byRg, riderFirst, total: done.length };
+}
+
+function getRangeData(byDate, from, to) {
+  const cnt = { cnt:0, riders: new Set(), newRiders: new Set(), rg:{} };
+  Object.entries(byDate).forEach(([dt, d]) => {
+    if (dt < from || dt > to) return;
+    cnt.cnt += d.cnt;
+    d.riders.forEach(r => cnt.riders.add(r));
+    d.newRiders.forEach(r => cnt.newRiders.add(r));
+    Object.entries(d.rg).forEach(([rg, rd]) => {
+      if (!cnt.rg[rg]) cnt.rg[rg] = { cnt:0, riders: new Set(), newRiders: new Set() };
+      cnt.rg[rg].cnt += rd.cnt;
+      rd.riders.forEach(r => cnt.rg[rg].riders.add(r));
+      rd.newRiders.forEach(r => cnt.rg[rg].newRiders.add(r));
+    });
+  });
+  return cnt;
+}
+
+function nf(n) { return (n||0).toLocaleString(); }
+function pct(a,b) { return b ? (a/b*100).toFixed(1)+'%' : '-'; }
+function diffTag(a, b) {
+  if (!b) return '';
+  const d = a - b, p = (d/b*100).toFixed(1);
+  const cl = d > 0 ? 'color:var(--green)' : d < 0 ? 'color:var(--red)' : 'color:var(--text3)';
+  return `<span style="font-size:.82rem;${cl}">${d>0?'+':''}${p}%</span>`;
+}
+
+function renderRiderAnalysis() {
+  const data = buildRiderData(RIDER_ROWS);
+  if (!data) { document.getElementById('rider-result').style.display='none'; return; }
+
+  const dates = Object.keys(data.byDate).sort();
+  const minDate = dates[0], maxDate = dates[dates.length-1];
+
+  // 날짜 셀렉터 세팅
+  ['rider-a-from','rider-a-to','rider-b-from','rider-b-to'].forEach(id => {
+    const el = document.getElementById(id);
+    const cur = el.value;
+    el.innerHTML = dates.map(d=>`<option value="${d}">${d}</option>`).join('');
+    if (cur && dates.includes(cur)) el.value = cur;
+  });
+  // 기본값: A = 전체 후반, B = 전반
+  const mid = dates[Math.floor(dates.length/2)] || minDate;
+  if (!document.getElementById('rider-a-from').value || !dates.includes(document.getElementById('rider-a-from').value)) {
+    document.getElementById('rider-a-from').value = mid;
+    document.getElementById('rider-a-to').value = maxDate;
+    document.getElementById('rider-b-from').value = minDate;
+    document.getElementById('rider-b-to').value = dates[Math.floor(dates.length/2)-1] || minDate;
+  }
+
+  document.getElementById('rider-result').style.display='block';
+  renderRiderKPI(data);
+  renderRiderCharts(data);
+  renderRiderTable(data);
+}
+
+function renderRiderKPI(data) {
+  const aFrom = document.getElementById('rider-a-from').value;
+  const aTo   = document.getElementById('rider-a-to').value;
+  const bFrom = document.getElementById('rider-b-from').value;
+  const bTo   = document.getElementById('rider-b-to').value;
+  const A = getRangeData(data.byDate, aFrom, aTo);
+  const B = getRangeData(data.byDate, bFrom, bTo);
+  const aDays = Object.keys(data.byDate).filter(d=>d>=aFrom&&d<=aTo).length || 1;
+  const bDays = Object.keys(data.byDate).filter(d=>d>=bFrom&&d<=bTo).length || 1;
+
+  document.getElementById('rider-kpi').innerHTML = `
+    <div class="kpi-card" style="border-top:3px solid var(--primary)">
+      <div class="kpi-val" style="color:var(--primary)">${nf(A.cnt)}</div>
+      <div class="kpi-label">완료건수 (기간A) ${diffTag(A.cnt,B.cnt)}</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-top:4px">일평균 ${(A.cnt/aDays).toFixed(0)}건 | 기간B ${nf(B.cnt)}</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid var(--green)">
+      <div class="kpi-val" style="color:var(--green)">${nf(A.riders.size)}</div>
+      <div class="kpi-label">액티브 라이더 (기간A) ${diffTag(A.riders.size,B.riders.size)}</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-top:4px">일평균 ${(A.riders.size/aDays).toFixed(1)}명 | 기간B ${nf(B.riders.size)}</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid var(--yellow)">
+      <div class="kpi-val" style="color:var(--yellow)">${nf(A.newRiders.size)}</div>
+      <div class="kpi-label">신규 라이더 (기간A) ${diffTag(A.newRiders.size,B.newRiders.size)}</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-top:4px">신규비율 ${pct(A.newRiders.size,A.riders.size)} | 기간B ${nf(B.newRiders.size)}</div>
+    </div>
+    <div class="kpi-card" style="border-top:3px solid var(--red)">
+      <div class="kpi-val" style="color:var(--text)">${A.riders.size?(A.cnt/A.riders.size).toFixed(1):'-'}</div>
+      <div class="kpi-label">라이더당 평균 완료건수 (기간A)</div>
+      <div style="font-size:.8rem;color:var(--text3);margin-top:4px">기간B ${B.riders.size?(B.cnt/B.riders.size).toFixed(1):'-'}건/명</div>
+    </div>`;
+}
+
+function renderRiderCharts(data) {
+  const aFrom = document.getElementById('rider-a-from').value;
+  const aTo   = document.getElementById('rider-a-to').value;
+  const bFrom = document.getElementById('rider-b-from').value;
+  const bTo   = document.getElementById('rider-b-to').value;
+  const dates = Object.keys(data.byDate).sort();
+
+  // ① 일별 완료건수 + 액티브 라이더 추이
+  const allDates = dates.filter(d => (d>=aFrom&&d<=aTo)||(d>=bFrom&&d<=bTo));
+  const labels = allDates.map(d=>d.slice(5));
+  const cntA = allDates.map(d=>(d>=aFrom&&d<=aTo)?data.byDate[d].cnt:null);
+  const ridA = allDates.map(d=>(d>=aFrom&&d<=aTo)?data.byDate[d].riders.size:null);
+  const newA = allDates.map(d=>(d>=aFrom&&d<=aTo)?data.byDate[d].newRiders.size:null);
+
+  if (riderChartTrend) riderChartTrend.destroy();
+  riderChartTrend = new Chart(document.getElementById('c-rider-trend'), {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'완료건수', data:cntA, backgroundColor:'rgba(49,130,246,0.7)', borderRadius:4, yAxisID:'y'},
+      {label:'액티브 라이더', data:ridA, type:'line', borderColor:'#00B493', backgroundColor:'rgba(0,180,147,0.12)', fill:true, tension:0.3, pointRadius:4, yAxisID:'y1'},
+      {label:'신규 라이더', data:newA, type:'line', borderColor:'#F5A524', backgroundColor:'rgba(245,165,36,0.1)', fill:false, tension:0.3, pointRadius:4, borderDash:[5,3], yAxisID:'y1'},
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{
+        y:{beginAtZero:true,title:{display:true,text:'완료건수'},grid:{color:'#F0F2F5'}},
+        y1:{beginAtZero:true,position:'right',title:{display:true,text:'라이더 수'},grid:{drawOnChartArea:false}}
+      }}
+  });
+
+  // ② 시군구별 건수 TOP 15
+  const A = getRangeData(data.byDate, aFrom, aTo);
+  const B = getRangeData(data.byDate, bFrom, bTo);
+  const rgList = [...new Set([...Object.keys(A.rg), ...Object.keys(B.rg)])];
+  const rgSorted = rgList.sort((a,b)=>(A.rg[b]?.cnt||0)-(A.rg[a]?.cnt||0)).slice(0,15);
+
+  if (riderChartRegion) riderChartRegion.destroy();
+  riderChartRegion = new Chart(document.getElementById('c-rider-region'), {
+    type:'bar',
+    data:{ labels:rgSorted,
+      datasets:[
+        {label:`기간A 완료건수`, data:rgSorted.map(r=>A.rg[r]?.cnt||0), backgroundColor:'rgba(49,130,246,0.75)', borderRadius:3},
+        {label:`기간B 완료건수`, data:rgSorted.map(r=>B.rg[r]?.cnt||0), backgroundColor:'rgba(49,130,246,0.25)', borderRadius:3},
+        {label:`기간A 라이더수`, data:rgSorted.map(r=>A.rg[r]?.riders.size||0), type:'line', borderColor:'#00B493', pointRadius:4, tension:0.2, yAxisID:'y1'},
+        {label:`기간B 라이더수`, data:rgSorted.map(r=>B.rg[r]?.riders.size||0), type:'line', borderColor:'#00B493', pointRadius:4, tension:0.2, borderDash:[4,3], yAxisID:'y1'},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{
+        y:{beginAtZero:true,title:{display:true,text:'건수'},grid:{color:'#F0F2F5'}},
+        y1:{beginAtZero:true,position:'right',title:{display:true,text:'라이더'},grid:{drawOnChartArea:false}}
+      }}
+  });
+
+  // ③ 신규 vs 기존 라이더 비율 (기간A 시군구 TOP 10)
+  const top10 = rgSorted.slice(0,10);
+  const newCntA = top10.map(r=>A.rg[r]?.newRiders.size||0);
+  const oldCntA = top10.map(r=>(A.rg[r]?.riders.size||0)-(A.rg[r]?.newRiders.size||0));
+
+  if (riderChartNew) riderChartNew.destroy();
+  riderChartNew = new Chart(document.getElementById('c-rider-new'), {
+    type:'bar',
+    data:{ labels:top10,
+      datasets:[
+        {label:'기존 라이더', data:oldCntA, backgroundColor:'rgba(49,130,246,0.65)', borderRadius:3, stack:'s'},
+        {label:'신규 라이더', data:newCntA, backgroundColor:'rgba(245,165,36,0.85)', borderRadius:3, stack:'s'},
+      ]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
+      scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true,title:{display:true,text:'라이더 수'}}}}
+  });
+}
+
+function renderRiderTable(data) {
+  const aFrom = document.getElementById('rider-a-from').value;
+  const aTo   = document.getElementById('rider-a-to').value;
+  const bFrom = document.getElementById('rider-b-from').value;
+  const bTo   = document.getElementById('rider-b-to').value;
+  const A = getRangeData(data.byDate, aFrom, aTo);
+  const B = getRangeData(data.byDate, bFrom, bTo);
+
+  const rgs = [...new Set([...Object.keys(A.rg), ...Object.keys(B.rg)])].sort((a,b)=>(A.rg[b]?.cnt||0)-(A.rg[a]?.cnt||0));
+  let h = `<table><thead><tr>
+    <th>#</th><th>시군구</th>
+    <th class="sortable">완료건수 A</th><th>완료건수 B</th><th>건수증감</th>
+    <th class="sortable">액티브라이더 A</th><th>액티브라이더 B</th><th>라이더증감</th>
+    <th>건당건수A</th>
+    <th class="sortable">신규라이더 A</th><th>신규라이더 B</th><th>신규증감</th><th>신규비율A</th>
+  </tr></thead><tbody>`;
+  rgs.forEach((rg, i) => {
+    const a = A.rg[rg]||{cnt:0,riders:new Set(),newRiders:new Set()};
+    const b = B.rg[rg]||{cnt:0,riders:new Set(),newRiders:new Set()};
+    const cntDiff = b.cnt ? ((a.cnt-b.cnt)/b.cnt*100).toFixed(1) : null;
+    const ridDiff = b.riders.size ? ((a.riders.size-b.riders.size)/b.riders.size*100).toFixed(1) : null;
+    const newDiff = b.newRiders.size ? ((a.newRiders.size-b.newRiders.size)/b.newRiders.size*100).toFixed(1) : null;
+    const diffCl = v => v===null?'':+v>0?'color:var(--green);font-weight:700':'color:var(--red);font-weight:700';
+    const diffStr = v => v===null?'-':`${+v>0?'+':''}${v}%`;
+    h += `<tr>
+      <td class="rank">${i+1}</td>
+      <td><strong>${rg}</strong></td>
+      <td style="color:var(--primary);font-weight:700">${nf(a.cnt)}</td>
+      <td style="color:var(--text3)">${nf(b.cnt)}</td>
+      <td style="${diffCl(cntDiff)}">${diffStr(cntDiff)}</td>
+      <td style="color:var(--green);font-weight:700">${nf(a.riders.size)}</td>
+      <td style="color:var(--text3)">${nf(b.riders.size)}</td>
+      <td style="${diffCl(ridDiff)}">${diffStr(ridDiff)}</td>
+      <td>${a.riders.size?(a.cnt/a.riders.size).toFixed(1):'-'}</td>
+      <td style="color:var(--yellow);font-weight:700">${nf(a.newRiders.size)}</td>
+      <td style="color:var(--text3)">${nf(b.newRiders.size)}</td>
+      <td style="${diffCl(newDiff)}">${diffStr(newDiff)}</td>
+      <td>${pct(a.newRiders.size, a.riders.size)}</td>
+    </tr>`;
+  });
+  h += '</tbody></table>';
+  document.getElementById('rider-region-table').innerHTML = h;
+  makeSortable(document.getElementById('rider-region-table'));
+}
+
+document.getElementById('rider-file').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    document.getElementById('rider-paste').value = ev.target.result;
+    document.getElementById('rider-parse-btn').click();
+  };
+  reader.readAsText(file, 'UTF-8');
+});
 </script>
 </body>
 </html>
