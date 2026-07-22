@@ -2045,7 +2045,7 @@ function renderRiderDash(){
       <td style="${diffCl(a.cnt,b.cnt)}">${diffStr(a.cnt,b.cnt)}</td>
       <td style="color:var(--green);font-weight:700">${nf(a.riders)}</td>
       <td style="color:var(--text3)">${nf(b.riders)}</td>
-      <td style="${diffCl(a.riders,b.riders)}">${diffStr(a.riders,b.riders)}</td>
+      <td style="${diffCl(b.riders,a.riders)}">${diffStr(b.riders,a.riders)}</td>
       <td>${a.riders?(a.cnt/a.riders).toFixed(1):'-'}</td>
       <td style="color:var(--yellow);font-weight:700">${nf(a.newRiders)}</td>
       <td style="color:var(--text3)">${nf(b.newRiders)}</td>
