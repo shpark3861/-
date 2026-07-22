@@ -2031,13 +2031,13 @@ function renderRiderDash(){
   riderChartNew=new Chart(document.getElementById('c-rider-new'),{
     type:'bar',
     data:{labels:top10,datasets:[
-      {label:'기존 라이더 (기간B 유경험)',data:top10.map(r=>{
+      {label:'기존 라이더 (기간A 유경험)',data:top10.map(r=>{
         const aS=aRiderSets[r]||new Set(), bS=bRiderSets[r]||new Set();
-        return [...aS].filter(id=>bS.has(id)).length;
+        return [...bS].filter(id=>aS.has(id)).length;
       }),backgroundColor:'rgba(49,130,246,0.65)',borderRadius:3,stack:'s'},
-      {label:'신규 라이더 (기간A 신규)',data:top10.map(r=>{
+      {label:'신규 라이더 (기간B 신규)',data:top10.map(r=>{
         const aS=aRiderSets[r]||new Set(), bS=bRiderSets[r]||new Set();
-        return [...aS].filter(id=>!bS.has(id)).length;
+        return [...bS].filter(id=>!aS.has(id)).length;
       }),backgroundColor:'rgba(245,165,36,0.85)',borderRadius:3,stack:'s'},
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
