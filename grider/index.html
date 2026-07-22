@@ -317,6 +317,12 @@ th.sort-desc::after{content:' ▼';color:var(--primary);font-size:.7em}
     <div class="tbl-scroll" id="rider-daily-table"></div>
   </div>
 
+  <!-- 시군구 × 일자 피벗 테이블 -->
+  <div class="chart-card">
+    <h3>시군구별 일자별 액티브 라이더 수 <span style="font-size:.85rem;font-weight:400;color:var(--text3)">(기간A 선택 구간)</span></h3>
+    <div class="tbl-scroll" id="rider-pivot-table"></div>
+  </div>
+
   <!-- 시군구 상세 테이블 -->
   <div class="chart-card">
     <h3>시군구별 상세 — 기간A vs 기간B 비교</h3>
@@ -2076,6 +2082,38 @@ function renderRiderDash(){
   dh+=`</tbody></table>`;
   document.getElementById('rider-daily-table').innerHTML=dh;
   makeSortable(document.getElementById('rider-daily-table'));
+
+  // 시군구 × 일자 피벗 테이블 (기간A, 액티브 라이더 수)
+  const allRgSet = new Set();
+  aDates.forEach(d => Object.keys(RD.byDate[d].rg||{}).forEach(rg => allRgSet.add(rg)));
+  const pivotRgs = [...allRgSet].sort((a,b) => (A.rg[b]?.cnt||0) - (A.rg[a]?.cnt||0));
+  // 일자별 전체 합계 행용
+  let ph = `<table style="font-size:.88rem"><thead><tr>
+    <th style="position:sticky;left:0;z-index:3;background:var(--surface2);min-width:90px">시군구</th>
+    <th style="background:var(--surface2);min-width:60px">합계</th>`;
+  aDates.forEach(d => { ph += `<th style="background:var(--surface2);min-width:52px;white-space:nowrap">${d.slice(5)}</th>`; });
+  ph += `</tr></thead><tbody>`;
+  // 합계 행 (날짜별 전체 액티브 라이더)
+  ph += `<tr style="background:#F0F4FD;font-weight:700">
+    <td style="position:sticky;left:0;background:#F0F4FD;font-weight:800;color:var(--primary)">전체</td>
+    <td style="color:var(--primary);font-weight:800">${nf(A.riders)}</td>`;
+  aDates.forEach(d => { ph += `<td style="color:var(--primary)">${nf(RD.byDate[d].riders)}</td>`; });
+  ph += `</tr>`;
+  // 시군구별 행
+  pivotRgs.forEach(rg => {
+    const total = A.rg[rg]?.riders || 0;
+    ph += `<tr>
+      <td style="position:sticky;left:0;z-index:1;background:var(--surface);font-weight:700">${rg}</td>
+      <td style="color:var(--green);font-weight:700">${nf(total)}</td>`;
+    aDates.forEach(d => {
+      const v = (RD.byDate[d].rg||{})[rg]?.riders || 0;
+      const bg = v === 0 ? '' : `background:rgba(0,180,147,${Math.min(0.08 + v/30*0.6, 0.7).toFixed(2)})`;
+      ph += `<td style="${bg};text-align:center">${v || ''}</td>`;
+    });
+    ph += `</tr>`;
+  });
+  ph += `</tbody></table>`;
+  document.getElementById('rider-pivot-table').innerHTML = ph;
 }
 (function(){renderRiderDash();})();
 </script>
