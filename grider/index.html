@@ -2084,8 +2084,34 @@ function renderRiderDash(){
   document.getElementById('rider-region-table').innerHTML=h;
   makeSortable(document.getElementById('rider-region-table'));
 
-  // 일자별 테이블 (기간A)
+  // 일자별 테이블 (기간A + 기간B)
   const aDates=RD.dates.filter(d=>d>=aFrom&&d<=aTo);
+  const bDatesD=RD.dates.filter(d=>d>=bFrom&&d<=bTo);
+  const renderDayRows=(dates,bgStyle)=>{
+    let rows=''; let prev=null;
+    dates.forEach(d=>{
+      const e=RD.byDate[d];
+      const topBrand=Object.entries(e.brands||{}).sort((a,b)=>b[1]-a[1])[0];
+      const perRider=e.riders?(e.cnt/e.riders).toFixed(1):'-';
+      const cntDiff=prev?e.cnt-prev.cnt:null;
+      const ridDiff=prev?e.riders-prev.riders:null;
+      const cntCl=cntDiff===null?'':cntDiff>0?'color:var(--green)':cntDiff<0?'color:var(--red)':'';
+      const ridCl=ridDiff===null?'':ridDiff>0?'color:var(--green)':ridDiff<0?'color:var(--red)':'';
+      const cntStr=cntDiff===null?'':` <span style="font-size:.8rem;${cntCl}">(${cntDiff>0?'+':''}${cntDiff})</span>`;
+      const ridStr=ridDiff===null?'':` <span style="font-size:.8rem;${ridCl}">(${ridDiff>0?'+':''}${ridDiff})</span>`;
+      rows+=`<tr style="${bgStyle}">
+        <td style="font-weight:700;color:var(--text)">${d}</td>
+        <td style="color:var(--primary);font-weight:700">${nf(e.cnt)}${cntStr}</td>
+        <td style="color:var(--green);font-weight:700">${nf(e.riders)}${ridStr}</td>
+        <td style="color:var(--yellow);font-weight:700">${nf(e.newRiders)}</td>
+        <td>${pct(e.newRiders,e.riders)}</td>
+        <td>${perRider}</td>
+        <td style="font-size:.88rem;color:var(--text2)">${topBrand?`${topBrand[0]} (${nf(topBrand[1])}건)`:'-'}</td>
+      </tr>`;
+      prev=e;
+    });
+    return rows;
+  };
   let dh=`<table><thead><tr>
     <th>일자</th>
     <th class="sortable">수행건수</th>
@@ -2095,29 +2121,12 @@ function renderRiderDash(){
     <th class="sortable">라이더당 건수</th>
     <th>TOP 브랜드</th>
   </tr></thead><tbody>`;
-  // 전날 대비 증감 표시
-  let prev=null;
-  aDates.forEach(d=>{
-    const e=RD.byDate[d];
-    const topBrand=Object.entries(e.brands||{}).sort((a,b)=>b[1]-a[1])[0];
-    const perRider=e.riders?(e.cnt/e.riders).toFixed(1):'-';
-    const cntDiff=prev?e.cnt-prev.cnt:null;
-    const ridDiff=prev?e.riders-prev.riders:null;
-    const cntCl=cntDiff===null?'':cntDiff>0?'color:var(--green)':cntDiff<0?'color:var(--red)':'';
-    const ridCl=ridDiff===null?'':ridDiff>0?'color:var(--green)':ridDiff<0?'color:var(--red)':'';
-    const cntStr=cntDiff===null?'':` <span style="font-size:.8rem;${cntCl}">(${cntDiff>0?'+':''}${cntDiff})</span>`;
-    const ridStr=ridDiff===null?'':` <span style="font-size:.8rem;${ridCl}">(${ridDiff>0?'+':''}${ridDiff})</span>`;
-    dh+=`<tr>
-      <td style="font-weight:700;color:var(--text)">${d}</td>
-      <td style="color:var(--primary);font-weight:700">${nf(e.cnt)}${cntStr}</td>
-      <td style="color:var(--green);font-weight:700">${nf(e.riders)}${ridStr}</td>
-      <td style="color:var(--yellow);font-weight:700">${nf(e.newRiders)}</td>
-      <td>${pct(e.newRiders,e.riders)}</td>
-      <td>${perRider}</td>
-      <td style="font-size:.88rem;color:var(--text2)">${topBrand?`${topBrand[0]} (${nf(topBrand[1])}건)`:'-'}</td>
-    </tr>`;
-    prev=e;
-  });
+  dh+=`<tr style="background:#EBF3FE"><td colspan="7" style="font-weight:800;color:var(--primary);padding:8px 14px;font-size:.9rem">📅 기간A (${aFrom} ~ ${aTo})</td></tr>`;
+  dh+=renderDayRows(aDates,'');
+  if(bDatesD.length){
+    dh+=`<tr style="background:#FFF9EC"><td colspan="7" style="font-weight:800;color:var(--yellow);padding:8px 14px;font-size:.9rem;border-top:2px solid var(--yellow)">📅 기간B (${bFrom} ~ ${bTo})</td></tr>`;
+    dh+=renderDayRows(bDatesD,'');
+  }
   dh+=`</tbody></table>`;
   document.getElementById('rider-daily-table').innerHTML=dh;
   makeSortable(document.getElementById('rider-daily-table'));
