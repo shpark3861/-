@@ -2005,14 +2005,40 @@ function renderRiderDash(){
               y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false}}}}
   });
 
-  // 신규 vs 기존 라이더 TOP10
+  // 신규 vs 기존 라이더 TOP10 — 기간B에도 탔으면 기존, 기간A에만 탔으면 신규
+  const bRiderSets=(()=>{
+    const sets={};
+    RD.dates.filter(d=>d>=bFrom&&d<=bTo).forEach(d=>{
+      Object.entries(RD.byDate[d].rg||{}).forEach(([rg,v])=>{
+        if(!sets[rg])sets[rg]=new Set();
+        (v.rids||[]).forEach(r=>sets[rg].add(r));
+      });
+    });
+    return sets;
+  })();
+  const aRiderSets=(()=>{
+    const sets={};
+    RD.dates.filter(d=>d>=aFrom&&d<=aTo).forEach(d=>{
+      Object.entries(RD.byDate[d].rg||{}).forEach(([rg,v])=>{
+        if(!sets[rg])sets[rg]=new Set();
+        (v.rids||[]).forEach(r=>sets[rg].add(r));
+      });
+    });
+    return sets;
+  })();
   const top10=rgList.slice(0,10);
   if(riderChartNew)riderChartNew.destroy();
   riderChartNew=new Chart(document.getElementById('c-rider-new'),{
     type:'bar',
     data:{labels:top10,datasets:[
-      {label:'기존 라이더',data:top10.map(r=>(A.rg[r]?.riders||0)-(A.rg[r]?.newRiders||0)),backgroundColor:'rgba(49,130,246,0.65)',borderRadius:3,stack:'s'},
-      {label:'신규 라이더',data:top10.map(r=>A.rg[r]?.newRiders||0),backgroundColor:'rgba(245,165,36,0.85)',borderRadius:3,stack:'s'},
+      {label:'기존 라이더 (기간B 유경험)',data:top10.map(r=>{
+        const aS=aRiderSets[r]||new Set(), bS=bRiderSets[r]||new Set();
+        return [...aS].filter(id=>bS.has(id)).length;
+      }),backgroundColor:'rgba(49,130,246,0.65)',borderRadius:3,stack:'s'},
+      {label:'신규 라이더 (기간A 신규)',data:top10.map(r=>{
+        const aS=aRiderSets[r]||new Set(), bS=bRiderSets[r]||new Set();
+        return [...aS].filter(id=>!bS.has(id)).length;
+      }),backgroundColor:'rgba(245,165,36,0.85)',borderRadius:3,stack:'s'},
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
       scales:{x:{stacked:true},y:{stacked:true,beginAtZero:true}}}
