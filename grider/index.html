@@ -335,6 +335,16 @@ th.sort-desc::after{content:' ▼';color:var(--primary);font-size:.7em}
     <div class="tbl-scroll" id="rider-pivot-table"></div>
   </div>
 
+  <div class="chart-card">
+    <h3>시군구별 일자별 완료건수 <span style="font-size:.85rem;font-weight:400;color:var(--text3)">(기간A · 기간B)</span></h3>
+    <div class="tbl-scroll" id="rider-pivot-cnt"></div>
+  </div>
+
+  <div class="chart-card">
+    <h3>시군구별 일자별 건당 라이더 평균 (건수/라이더) <span style="font-size:.85rem;font-weight:400;color:var(--text3)">(기간A · 기간B)</span></h3>
+    <div class="tbl-scroll" id="rider-pivot-avg"></div>
+  </div>
+
   <!-- 시군구 상세 테이블 -->
   <div class="chart-card">
     <h3>시군구별 상세 — 기간A vs 기간B 비교</h3>
@@ -2279,6 +2289,134 @@ function renderRiderDash(){
   });
   ph += `</tbody></table>`;
   document.getElementById('rider-pivot-table').innerHTML = ph;
+
+  // ── 건수 피벗 테이블
+  const buildPivot = (field, fmtVal, heatFn, titleSuffix) => {
+    let pp = `<table style="font-size:.88rem"><thead><tr>
+      <th style="position:sticky;left:0;z-index:3;background:var(--surface2);min-width:120px">시군구</th>
+      <th style="background:#EBF3FE;min-width:60px;color:var(--primary)">A합계</th>`;
+    aDates.forEach(d => { pp += `<th style="background:#EBF3FE;min-width:52px;white-space:nowrap;color:var(--primary)">${d.slice(5)}</th>`; });
+    if (hasB) {
+      pp += `<th style="${sepStyle}background:#FFF9EC;min-width:60px;color:var(--yellow)">B합계</th>`;
+      bDates2.forEach(d => { pp += `<th style="background:#FFF9EC;min-width:52px;white-space:nowrap;color:var(--yellow)">${d.slice(5)}</th>`; });
+    }
+    pp += `</tr></thead><tbody>`;
+    // 전체 행
+    const totA = aDates.reduce((s,d)=>s+(RD.byDate[d][field]||0),0);
+    const totB = bDates2.reduce((s,d)=>s+(RD.byDate[d][field]||0),0);
+    pp += `<tr style="background:#F0F4FD;font-weight:700">
+      <td style="position:sticky;left:0;background:#F0F4FD;font-weight:800;color:var(--primary)">전체</td>
+      <td style="color:var(--primary);font-weight:800;background:#EBF3FE">${fmtVal(totA, aDates.length)}</td>`;
+    aDates.forEach(d => { pp += `<td style="color:var(--primary);background:#EBF3FE">${nf(RD.byDate[d][field]||0)}</td>`; });
+    if (hasB) {
+      pp += `<td style="${sepStyle}color:var(--yellow);font-weight:800;background:#FFF9EC">${fmtVal(totB, bDates2.length)}</td>`;
+      bDates2.forEach(d => { pp += `<td style="color:var(--yellow);background:#FFF9EC">${nf(RD.byDate[d][field]||0)}</td>`; });
+    }
+    pp += `</tr>`;
+    pivotRgs.forEach(rg => {
+      const sumA2 = aDates.reduce((s,d)=>s+((RD.byDate[d].rg||{})[rg]?.[field]||0),0);
+      const sumB2 = bDates2.reduce((s,d)=>s+((RD.byDate[d].rg||{})[rg]?.[field]||0),0);
+      pp += `<tr>
+        <td style="position:sticky;left:0;z-index:1;background:var(--surface);font-weight:700">${rg}${promoTag(rg)}</td>
+        <td style="color:var(--green);font-weight:700;background:#EBF3FE">${fmtVal(sumA2, aDates.length)}</td>`;
+      aDates.forEach(d => {
+        const v = (RD.byDate[d].rg||{})[rg]?.[field]||0;
+        const bg = heatFn(v, 'a');
+        pp += `<td style="${bg};text-align:center">${v || ''}</td>`;
+      });
+      if (hasB) {
+        pp += `<td style="${sepStyle}color:var(--yellow);font-weight:700;background:#FFF9EC">${sumB2>0?fmtVal(sumB2,bDates2.length):''}</td>`;
+        bDates2.forEach(d => {
+          const v = (RD.byDate[d].rg||{})[rg]?.[field]||0;
+          const bg = heatFn(v, 'b');
+          pp += `<td style="${bg};text-align:center">${v || ''}</td>`;
+        });
+      }
+      pp += `</tr>`;
+    });
+    pp += `</tbody></table>`;
+    return pp;
+  };
+
+  document.getElementById('rider-pivot-cnt').innerHTML = buildPivot(
+    'cnt',
+    (sum) => nf(sum),
+    (v, side) => v===0 ? (side==='b'?'background:#FFF9EC':'background:#EBF3FE')
+      : side==='b' ? `background:rgba(245,165,36,${Math.min(0.08+v/80*0.6,0.7).toFixed(2)})`
+                   : `background:rgba(49,130,246,${Math.min(0.08+v/80*0.6,0.7).toFixed(2)})`
+  );
+
+  // avg: 건수/라이더
+  document.getElementById('rider-pivot-avg').innerHTML = buildPivot(
+    'cnt',
+    (sum, days) => (sum/days).toFixed(1),
+    (v, side) => {
+      const rg2 = ''; // 이 시그니처에선 rg 접근 불가 — 단순 건수 히트맵
+      return v===0 ? (side==='b'?'background:#FFF9EC':'background:#EBF3FE')
+        : side==='b' ? `background:rgba(245,165,36,${Math.min(0.08+v/80*0.5,0.65).toFixed(2)})`
+                     : `background:rgba(49,130,246,${Math.min(0.08+v/80*0.5,0.65).toFixed(2)})`;
+    }
+  );
+
+  // avg 테이블은 건수/라이더로 셀 재계산
+  (() => {
+    let pp = `<table style="font-size:.88rem"><thead><tr>
+      <th style="position:sticky;left:0;z-index:3;background:var(--surface2);min-width:120px">시군구</th>
+      <th style="background:#EBF3FE;min-width:60px;color:var(--primary)">A평균</th>`;
+    aDates.forEach(d => { pp += `<th style="background:#EBF3FE;min-width:52px;white-space:nowrap;color:var(--primary)">${d.slice(5)}</th>`; });
+    if (hasB) {
+      pp += `<th style="${sepStyle}background:#FFF9EC;min-width:60px;color:var(--yellow)">B평균</th>`;
+      bDates2.forEach(d => { pp += `<th style="background:#FFF9EC;min-width:52px;white-space:nowrap;color:var(--yellow)">${d.slice(5)}</th>`; });
+    }
+    pp += `</tr></thead><tbody>`;
+    // 전체
+    const gA = aDates.reduce((s,d)=>s+RD.byDate[d].cnt,0);
+    const gR = aDates.reduce((s,d)=>s+RD.byDate[d].riders,0);
+    const gB = bDates2.reduce((s,d)=>s+RD.byDate[d].cnt,0);
+    const gRB= bDates2.reduce((s,d)=>s+RD.byDate[d].riders,0);
+    pp += `<tr style="background:#F0F4FD;font-weight:700">
+      <td style="position:sticky;left:0;background:#F0F4FD;font-weight:800;color:var(--primary)">전체</td>
+      <td style="color:var(--primary);font-weight:800;background:#EBF3FE">${gR?(gA/gR).toFixed(1):'-'}</td>`;
+    aDates.forEach(d => {
+      const e=RD.byDate[d]; const v=e.riders?(e.cnt/e.riders).toFixed(1):'-';
+      pp += `<td style="color:var(--primary);background:#EBF3FE">${v}</td>`;
+    });
+    if (hasB) {
+      pp += `<td style="${sepStyle}color:var(--yellow);font-weight:800;background:#FFF9EC">${gRB?(gB/gRB).toFixed(1):'-'}</td>`;
+      bDates2.forEach(d => {
+        const e=RD.byDate[d]; const v=e.riders?(e.cnt/e.riders).toFixed(1):'-';
+        pp += `<td style="color:var(--yellow);background:#FFF9EC">${v}</td>`;
+      });
+    }
+    pp += `</tr>`;
+    pivotRgs.forEach(rg => {
+      const cntA=aDates.reduce((s,d)=>s+((RD.byDate[d].rg||{})[rg]?.cnt||0),0);
+      const ridA=aDates.reduce((s,d)=>s+((RD.byDate[d].rg||{})[rg]?.riders||0),0);
+      const cntB=bDates2.reduce((s,d)=>s+((RD.byDate[d].rg||{})[rg]?.cnt||0),0);
+      const ridB=bDates2.reduce((s,d)=>s+((RD.byDate[d].rg||{})[rg]?.riders||0),0);
+      pp += `<tr>
+        <td style="position:sticky;left:0;z-index:1;background:var(--surface);font-weight:700">${rg}${promoTag(rg)}</td>
+        <td style="color:var(--green);font-weight:700;background:#EBF3FE">${ridA?(cntA/ridA).toFixed(1):'-'}</td>`;
+      aDates.forEach(d => {
+        const rv=(RD.byDate[d].rg||{})[rg]; const v=rv?.riders?(rv.cnt/rv.riders).toFixed(1):'';
+        const num=rv?.riders?(rv.cnt/rv.riders):0;
+        const bg=num===0?'background:#EBF3FE':`background:rgba(49,130,246,${Math.min(0.08+num/20*0.55,0.65).toFixed(2)})`;
+        pp += `<td style="${bg};text-align:center">${v}</td>`;
+      });
+      if (hasB) {
+        pp += `<td style="${sepStyle}color:var(--yellow);font-weight:700;background:#FFF9EC">${ridB?(cntB/ridB).toFixed(1):'-'}</td>`;
+        bDates2.forEach(d => {
+          const rv=(RD.byDate[d].rg||{})[rg]; const v=rv?.riders?(rv.cnt/rv.riders).toFixed(1):'';
+          const num=rv?.riders?(rv.cnt/rv.riders):0;
+          const bg=num===0?'background:#FFF9EC':`background:rgba(245,165,36,${Math.min(0.08+num/20*0.55,0.65).toFixed(2)})`;
+          pp += `<td style="${bg};text-align:center">${v}</td>`;
+        });
+      }
+      pp += `</tr>`;
+    });
+    pp += `</tbody></table>`;
+    document.getElementById('rider-pivot-avg').innerHTML = pp;
+  })();
 }
 (function(){renderRiderDash();})();
 </script>
