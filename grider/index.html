@@ -1882,7 +1882,7 @@ const PROMO_RGS = new Set([
   '하남시','부천시',
 ]);
 const promoTag = rg => PROMO_RGS.has(rg)
-  ? `<span style="font-size:.72rem;font-weight:700;background:#EBF3FE;color:var(--primary);border:1px solid var(--primary);border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle">프로모션</span>`
+  ? `<span style="font-size:.68rem;font-weight:700;background:#EBF3FE;color:var(--primary);border:1px solid var(--primary);border-radius:4px;padding:1px 4px;margin-left:4px;vertical-align:middle;white-space:nowrap;display:inline-block">프로</span>`
   : '';
 // 차트 레이블용 (plain text)
 const promoLabel = rg => PROMO_RGS.has(rg) ? rg + ' ★' : rg;
@@ -2232,7 +2232,7 @@ function renderRiderDash(){
   const hasB = bDates2.length > 0;
   const sepStyle = 'border-left:3px solid var(--primary);';
   let ph = `<table style="font-size:.88rem"><thead><tr>
-    <th style="position:sticky;left:0;z-index:3;background:var(--surface2);min-width:90px">시군구</th>
+    <th style="position:sticky;left:0;z-index:3;background:var(--surface2);min-width:120px">시군구</th>
     <th style="background:#EBF3FE;min-width:60px;color:var(--primary)">A평균</th>`;
   aDates.forEach(d => { ph += `<th style="background:#EBF3FE;min-width:52px;white-space:nowrap;color:var(--primary)">${d.slice(5)}</th>`; });
   if (hasB) {
