@@ -1864,6 +1864,29 @@ let riderChartDaily=null, riderChartRegion=null, riderChartNew=null, riderChartT
 let riderChartBrand=null, riderChartBrandDaily=null, riderChartFixed=null;
 const RD = JSON.parse(document.getElementById('rider-data').textContent);
 
+// 프로모션 대상 시군구 (6/18~7/22)
+const PROMO_RGS = new Set([
+  // 요기배달+2000/땡배달+1000
+  '성동구','강서구','양천구','관악구','성북구','동작구','강남구','광명시',
+  // 요기배달+1000/땡배달+500
+  '영등포구','구로구','노원구','광진구','동대문구','마포구','서대문구','은평구',
+  // 요기배달+1000
+  '청주시','광산구','동구','남구','춘천시','성산구','일산동구',
+  // 요기배달+500
+  '남동구','부평구','미추홀구','익산시',
+  // 요기배달+3000
+  '흥덕구','남양주시',
+  // 요기배달+10000
+  '분당구',
+  // 땡배달+1000
+  '하남시','부천시',
+]);
+const promoTag = rg => PROMO_RGS.has(rg)
+  ? `<span style="font-size:.72rem;font-weight:700;background:#EBF3FE;color:var(--primary);border:1px solid var(--primary);border-radius:4px;padding:1px 5px;margin-left:4px;vertical-align:middle">프로모션</span>`
+  : '';
+// 차트 레이블용 (plain text)
+const promoLabel = rg => PROMO_RGS.has(rg) ? rg + ' ★' : rg;
+
 function nf(n){return(n||0).toLocaleString();}
 function pct(a,b){return b?(a/b*100).toFixed(1)+'%':'-';}
 function diffTag(a,b){
@@ -2007,7 +2030,7 @@ function renderRiderDash(){
   if(riderChartRegion)riderChartRegion.destroy();
   riderChartRegion=new Chart(document.getElementById('c-rider-region'),{
     type:'bar',
-    data:{labels:rgList,datasets:[
+    data:{labels:rgList.map(promoLabel),datasets:[
       {label:'기간A 건수',data:rgList.map(r=>A.rg[r]?.cnt||0),backgroundColor:'rgba(49,130,246,0.75)',borderRadius:3},
       {label:'기간B 건수',data:rgList.map(r=>B.rg[r]?.cnt||0),backgroundColor:'rgba(49,130,246,0.2)',borderRadius:3},
       {label:'기간A 라이더',data:rgList.map(r=>A.rg[r]?.riders||0),type:'line',borderColor:'#00B493',pointRadius:4,tension:0.2,yAxisID:'y1'},
@@ -2042,7 +2065,7 @@ function renderRiderDash(){
   if(riderChartNew)riderChartNew.destroy();
   riderChartNew=new Chart(document.getElementById('c-rider-new'),{
     type:'bar',
-    data:{labels:top10,datasets:[
+    data:{labels:top10.map(promoLabel),datasets:[
       {label:'기존 라이더 (기간A 유경험)',data:top10.map(r=>{
         const aS=aRiderSets[r]||new Set(), bS=bRiderSets[r]||new Set();
         return [...bS].filter(id=>aS.has(id)).length;
@@ -2094,7 +2117,7 @@ function renderRiderDash(){
     if(riderChartFixed)riderChartFixed.destroy();
     riderChartFixed=new Chart(document.getElementById('c-rider-fixed'),{
       type:'bar',
-      data:{labels:fixedRgs,datasets:[
+      data:{labels:fixedRgs.map(promoLabel),datasets:[
         {label:'5월 유지',data:fixedRgs.map(retained),backgroundColor:'rgba(49,130,246,0.75)',borderRadius:3,stack:'s'},
         {label:'6/1~17 신규 (프로모션 無)',data:fixedRgs.map(jun신규),backgroundColor:'rgba(245,165,36,0.85)',borderRadius:3,stack:'s'},
         {label:'6/18~7/22 신규 (프로모션 有)',data:fixedRgs.map(pro신규),backgroundColor:'rgba(0,180,147,0.85)',borderRadius:3,stack:'s'},
@@ -2130,7 +2153,7 @@ function renderRiderDash(){
       // brand breakdown per region per date — not stored, skip top brand
     });
     h+=`<tr>
-      <td class="rank">${i+1}</td><td><strong>${rg}</strong></td>
+      <td class="rank">${i+1}</td><td><strong>${rg}</strong>${promoTag(rg)}</td>
       <td style="color:var(--primary);font-weight:700">${nf(a.cnt)}</td>
       <td style="color:var(--text3)">${nf(b.cnt)}</td>
       <td style="${diffCl(a.cnt,b.cnt)}">${diffStr(a.cnt,b.cnt)}</td>
@@ -2233,7 +2256,7 @@ function renderRiderDash(){
     const avgA = avg(sumA, aDaysCnt);
     const avgB = avg(sumB, bDaysCnt);
     ph += `<tr>
-      <td style="position:sticky;left:0;z-index:1;background:var(--surface);font-weight:700">${rg}</td>
+      <td style="position:sticky;left:0;z-index:1;background:var(--surface);font-weight:700">${rg}${promoTag(rg)}</td>
       <td style="color:var(--green);font-weight:700;background:#EBF3FE">${avgA}</td>`;
     aDates.forEach(d => {
       const v = (RD.byDate[d].rg||{})[rg]?.riders || 0;
