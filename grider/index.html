@@ -311,6 +311,18 @@ th.sort-desc::after{content:' ▼';color:var(--primary);font-size:.7em}
     </div>
   </div>
 
+  <!-- 고정기간 라이더 분석 -->
+  <div class="chart-card">
+    <h3>시군구별 라이더 유입·이탈 분석 <span style="font-size:.82rem;font-weight:400;color:var(--text3)">— 고정 기간 비교</span></h3>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:14px;font-size:.85rem">
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:rgba(49,130,246,0.75);border-radius:3px;display:inline-block"></span>5월 유지 (5/1~31 → 이후 복귀)</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:rgba(245,165,36,0.85);border-radius:3px;display:inline-block"></span>6/1~17 신규 (프로모션 無)</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:rgba(0,180,147,0.85);border-radius:3px;display:inline-block"></span>6/18~7/22 신규 (프로모션 有)</span>
+      <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;background:rgba(240,68,82,0.75);border-radius:3px;display:inline-block"></span>5월 이탈 (5/1~31 → 이후 미복귀)</span>
+    </div>
+    <div class="chart-wrap" style="height:400px"><canvas id="c-rider-fixed"></canvas></div>
+  </div>
+
   <!-- 일자별 테이블 -->
   <div class="chart-card">
     <h3>📅 일자별 현황 <span style="font-size:.85rem;font-weight:400;color:var(--text3)">(기간A 선택 구간)</span></h3>
@@ -1849,7 +1861,7 @@ renderDetail();
 // ═══════════════════════════════════════════════════════════
 let RIDER_ROWS = [];
 let riderChartDaily=null, riderChartRegion=null, riderChartNew=null, riderChartTrend=null;
-let riderChartBrand=null, riderChartBrandDaily=null;
+let riderChartBrand=null, riderChartBrandDaily=null, riderChartFixed=null;
 const RD = JSON.parse(document.getElementById('rider-data').textContent);
 
 function nf(n){return(n||0).toLocaleString();}
@@ -2054,6 +2066,48 @@ function renderRiderDash(){
         y1:{beginAtZero:true,position:'right',grid:{drawOnChartArea:false},title:{display:true,text:'건수'}}
       }}
   });
+
+  // ── 고정기간 라이더 유입·이탈 차트 ──
+  (function(){
+    const MAY_F='2026-05-01', MAY_T='2026-05-31';
+    const JUN_F='2026-06-01', JUN_T='2026-06-17';
+    const PRO_F='2026-06-18', PRO_T='2026-07-22';
+    const rgSets=from=>to=>{
+      const s={};
+      RD.dates.filter(d=>d>=from&&d<=to).forEach(d=>{
+        Object.entries(RD.byDate[d].rg||{}).forEach(([rg,v])=>{
+          if(!s[rg])s[rg]=new Set();
+          (v.rids||[]).forEach(r=>s[rg].add(r));
+        });
+      });
+      return s;
+    };
+    const mayS=rgSets(MAY_F)(MAY_T);
+    const junS=rgSets(JUN_F)(JUN_T);
+    const proS=rgSets(PRO_F)(PRO_T);
+    // 5월 기준 건수 많은 TOP15
+    const fixedRgs=Object.keys(mayS).sort((a,b)=>(mayS[b].size||0)-(mayS[a].size||0)).slice(0,15);
+    const retained=r=>{const m=mayS[r]||new Set(),j=junS[r]||new Set(),p=proS[r]||new Set(); return [...m].filter(id=>j.has(id)||p.has(id)).length;};
+    const jun신규=r=>{const m=mayS[r]||new Set(),j=junS[r]||new Set(); return [...j].filter(id=>!m.has(id)).length;};
+    const pro신규=r=>{const m=mayS[r]||new Set(),j=junS[r]||new Set(),p=proS[r]||new Set(); return [...p].filter(id=>!m.has(id)&&!j.has(id)).length;};
+    const churned=r=>{const m=mayS[r]||new Set(),j=junS[r]||new Set(),p=proS[r]||new Set(); return -[...m].filter(id=>!j.has(id)&&!p.has(id)).length;};
+    if(riderChartFixed)riderChartFixed.destroy();
+    riderChartFixed=new Chart(document.getElementById('c-rider-fixed'),{
+      type:'bar',
+      data:{labels:fixedRgs,datasets:[
+        {label:'5월 유지',data:fixedRgs.map(retained),backgroundColor:'rgba(49,130,246,0.75)',borderRadius:3,stack:'s'},
+        {label:'6/1~17 신규 (프로모션 無)',data:fixedRgs.map(jun신규),backgroundColor:'rgba(245,165,36,0.85)',borderRadius:3,stack:'s'},
+        {label:'6/18~7/22 신규 (프로모션 有)',data:fixedRgs.map(pro신규),backgroundColor:'rgba(0,180,147,0.85)',borderRadius:3,stack:'s'},
+        {label:'5월 이탈',data:fixedRgs.map(churned),backgroundColor:'rgba(240,68,82,0.75)',borderRadius:3,stack:'s'},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>`${ctx.dataset.label}: ${Math.abs(ctx.raw)}명`}}},
+        scales:{
+          x:{stacked:true},
+          y:{stacked:true,beginAtZero:false,ticks:{callback:v=>Math.abs(v)+'명'}},
+        }}
+    });
+  })();
 
   // 상세 테이블
   const allRg=[...new Set([...Object.keys(A.rg),...Object.keys(B.rg)])].sort((a,b)=>(A.rg[b]?.cnt||0)-(A.rg[a]?.cnt||0));
