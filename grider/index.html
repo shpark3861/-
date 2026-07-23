@@ -2079,9 +2079,12 @@ function renderRiderDash(){
         const aS=aRiderSets[r]||new Set(), bS=bRiderSets[r]||new Set();
         return -[...aS].filter(id=>!bS.has(id)).length;
       }),backgroundColor:'rgba(240,68,82,0.75)',borderRadius:3,stack:'s'},
+      {label:'기간A 건수',data:top10.map(r=>A.rg[r]?.cnt||0),
+       type:'line',borderColor:'#3182F6',backgroundColor:'rgba(49,130,246,0.05)',
+       pointRadius:3,tension:0.2,yAxisID:'y1',stack:undefined},
       {label:'기간B 건수',data:top10.map(r=>B.rg[r]?.cnt||0),
        type:'line',borderColor:'#8B95A1',backgroundColor:'rgba(139,149,161,0.05)',
-       pointRadius:3,tension:0.2,yAxisID:'y1',stack:undefined,borderDash:[2,2]},
+       pointRadius:3,tension:0.2,yAxisID:'y1',stack:undefined,borderDash:[4,3]},
     ]},
     options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{position:'top'}},
       scales:{
